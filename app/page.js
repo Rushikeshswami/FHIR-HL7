@@ -35,7 +35,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import {
   CheckCircle2, Circle, Code2, Copy, ExternalLink, FileJson, GraduationCap,
   ListChecks, Target, Trophy, XCircle, Zap, Rocket, BookOpen, Wrench,
-  Library, AlertTriangle, Sparkles, MessageCircleQuestion,
+  Library, AlertTriangle, Sparkles, MessageCircleQuestion, Download, Upload,
 } from 'lucide-react'
 
 // ---------- helpers ----------
@@ -323,6 +323,7 @@ function App() {
   const [results, setResults] = useState({})
   const [pythonChecks, setPythonChecks] = useState({})
   const [view, setView] = useState('learn')
+  const [toast, setToast] = useState(null)
 
   useEffect(() => {
     try {
@@ -383,6 +384,51 @@ function App() {
   const togglePy = (i) => setPythonChecks((p) => ({ ...p, [i]: !p[i] }))
   const pyDone = Object.values(pythonChecks).filter(Boolean).length
 
+  // ---------- Backup / Restore ----------
+  const exportAllProgress = () => {
+    try {
+      const dump = { app: 'fhir-accelerator', version: 2, exportedAt: new Date().toISOString(), keys: {} }
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (k && k.startsWith('fhir-')) dump.keys[k] = localStorage.getItem(k)
+      }
+      const blob = new Blob([JSON.stringify(dump, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')
+      a.download = `fhir-accelerator-backup-${stamp}.json`
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 200)
+      setToast({ type: 'success', msg: `Backup downloaded · ${Object.keys(dump.keys).length} keys` })
+    } catch (e) {
+      setToast({ type: 'error', msg: 'Export failed: ' + e.message })
+    }
+    setTimeout(() => setToast(null), 3500)
+  }
+
+  const importAllProgress = async (file) => {
+    if (!file) return
+    try {
+      const text = await file.text()
+      const dump = JSON.parse(text)
+      if (!dump.keys || dump.app !== 'fhir-accelerator') throw new Error('Not a valid FHIR Accelerator backup file.')
+      // Clear existing fhir-* keys to avoid mixed state
+      const toDelete = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (k && k.startsWith('fhir-')) toDelete.push(k)
+      }
+      toDelete.forEach((k) => localStorage.removeItem(k))
+      Object.entries(dump.keys).forEach(([k, v]) => localStorage.setItem(k, v))
+      setToast({ type: 'success', msg: `Restored ${Object.keys(dump.keys).length} keys · reloading…` })
+      setTimeout(() => window.location.reload(), 900)
+    } catch (e) {
+      setToast({ type: 'error', msg: 'Import failed: ' + e.message })
+      setTimeout(() => setToast(null), 3500)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-zinc-100">
       <header className="border-b border-zinc-800/80 bg-zinc-950/70 backdrop-blur sticky top-0 z-40">
@@ -397,6 +443,18 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <input
+              id="fhir-restore-input" type="file" accept="application/json" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; importAllProgress(f); e.target.value = '' }}
+            />
+            <Button size="sm" variant="outline" className="border-zinc-700 hidden md:inline-flex" onClick={exportAllProgress} title="Download a JSON backup of all your progress">
+              <Download className="w-4 h-4 mr-1.5" /> Backup
+            </Button>
+            <Button size="sm" variant="outline" className="border-zinc-700 hidden md:inline-flex"
+              onClick={() => document.getElementById('fhir-restore-input').click()}
+              title="Restore from a previously-downloaded backup">
+              <Upload className="w-4 h-4 mr-1.5" /> Restore
+            </Button>
             <Button variant={view === 'learn' ? 'default' : 'ghost'} size="sm" onClick={() => setView('learn')}>
               <GraduationCap className="w-4 h-4 mr-1.5" /> Learn
             </Button>
@@ -684,6 +742,16 @@ function App() {
       <footer className="border-t border-zinc-800/60 mt-12 py-6 text-center text-xs text-zinc-500">
         Private local LMS · No data leaves your browser · Progress persisted via localStorage
       </footer>
+
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg border max-w-sm text-sm ${
+          toast.type === 'success'
+            ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-200'
+            : 'bg-rose-500/10 border-rose-500/50 text-rose-200'
+        }`}>
+          {toast.msg}
+        </div>
+      )}
     </div>
   )
 }
