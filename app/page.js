@@ -693,6 +693,7 @@ const CareerMatrix = () => {
   const copy = (i, text) => { navigator.clipboard.writeText(text); setCopied(i); setTimeout(() => setCopied(null), 1500) }
   return (
     <div className="space-y-6">
+      <ResumeExporter />
       <Card className="border-zinc-800 bg-zinc-900/60">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Target className="w-5 h-5 text-emerald-400" /> Target Architecture Matrix</CardTitle>
@@ -780,6 +781,247 @@ const CareerMatrix = () => {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+// ---------- RESUME EXPORTER ----------
+const ResumeExporter = () => {
+  const [profile, setProfile] = useState({
+    name: 'Your Name',
+    currentRole: 'Healthcare Technical Analyst',
+    years: '3',
+    location: 'Bengaluru, India',
+    email: 'you@example.com',
+    phone: '+91-XXXXX-XXXXX',
+    github: 'github.com/yourhandle',
+    linkedin: 'linkedin.com/in/yourhandle',
+  })
+  const [stats, setStats] = useState({ daysPassed: 0, tasksPassed: 0, totalTasks: 0, readiness: {} })
+  const [copied, setCopied] = useState(null)
+
+  // Hydrate stats from localStorage written by the Learn view + Readiness checklist
+  useEffect(() => {
+    try {
+      const learn = JSON.parse(localStorage.getItem('fhir-accelerator-v2') || '{}')
+      const results = learn.results || {}
+      const passedKeys = Object.keys(results).filter((k) => results[k]?.ok)
+      // count days passed
+      const dayMap = {}
+      passedKeys.forEach((k) => { const d = k.split('_')[0]; dayMap[d] = (dayMap[d] || 0) + 1 })
+      // a day is passed if ALL its challenges pass — quick proxy: count days with any pass for now and refine
+      const totalTasks = Object.keys(results).length
+      const tasksPassed = passedKeys.length
+
+      // Per the curriculum: full pass requires all sub-tasks per day
+      const daysPassed = (window.__FHIR_CURRICULUM__ || []).filter((d) => {
+        const chs = d.challenges || d.drills || d.milestones || []
+        return chs.length > 0 && chs.every((c) => results[`${d.day}_${c.id}`]?.ok)
+      }).length
+
+      // Readiness from per-section storage
+      const readiness = {}
+      for (let i = 0; i < 11; i++) {
+        try {
+          const raw = localStorage.getItem(`fhir-readiness-${i}`)
+          if (raw) {
+            const checks = JSON.parse(raw)
+            readiness[i] = Object.values(checks).filter(Boolean).length
+          }
+        } catch {}
+      }
+      setStats({ daysPassed, tasksPassed, totalTasks, readiness })
+    } catch {}
+  }, [])
+
+  // Expose curriculum globally for the day-pass calc
+  useEffect(() => { window.__FHIR_CURRICULUM__ = CURRICULUM }, [])
+
+  const totalReadinessTicks = Object.values(stats.readiness).reduce((a, b) => a + b, 0)
+  const totalReadinessItems = 50 // approx total across checklist
+
+  const onChange = (k, v) => setProfile((p) => ({ ...p, [k]: v }))
+
+  // Build artefacts
+  const skillsBullet = `FHIR (R4, US Core 6.1+) · HL7v2 → FHIR mapping · SMART on FHIR (Standalone + Backend Services) · Bulk Data $export · Python (FastAPI, async httpx, Pydantic) · LOINC / SNOMED CT / RxNorm / ICD-10-CM · CodeableConcept + Identifier + Reference fluency · CapabilityStatement-first integration · Profile validation (IG validator JAR)`
+
+  const resumeBlock = `# ${profile.name}
+${profile.currentRole}  ·  ${profile.location}
+${profile.email}  ·  ${profile.phone}
+${profile.linkedin}  ·  ${profile.github}
+
+## Summary
+${profile.years}+ years of production Python engineering with deep, hands-on HL7 FHIR R4 fluency. Built end-to-end FHIR resource modelling, US Core profile conformance, SMART on FHIR authorization (Authorization Code + PKCE and Backend Services JWT), and Bulk Data $export integrations. Comfortable producing and validating clinical (Patient, Encounter, Observation, Condition, MedicationRequest, AllergyIntolerance) and payer (Coverage, Claim, EOB) resources, mapping legacy HL7v2 messages (ADT, ORU, SIU, RDE, VXU) into FHIR transaction Bundles, and debugging integrations CapabilityStatement-first.
+
+## FHIR / Interoperability Skills
+- Resources: Patient, Practitioner, PractitionerRole, Organization, Location, Encounter, Observation (Vital Signs / Lab / SDOH / Smoking Status), Condition, MedicationRequest, AllergyIntolerance, Immunization, Procedure, ServiceRequest, DiagnosticReport, DocumentReference, Coverage, Claim, ClaimResponse, ExplanationOfBenefit, CarePlan, CareTeam, Goal, Provenance, MessageHeader.
+- Data Types: CodeableConcept / Coding (multi-system cross-walks), Identifier (system+value patterns), Reference (relative / absolute / urn:uuid in transactions / logical), Period, Quantity (UCUM-disciplined), HumanName, Address, ContactPoint, Attachment.
+- Terminology Systems: LOINC, SNOMED CT, RxNorm, ICD-10-CM/PCS, CPT, HCPCS, NDC, CVX, UCUM, NUCC Provider Taxonomy.
+- Search & Operations: token / date / reference / quantity / chained / _has, _include / _revinclude, $validate, $everything, $lastn, $expand, $lookup, $translate, $export.
+- Profiles & IGs: US Core 6.1 / 7.0 (race, ethnicity, birthsex extensions, must-support semantics), Da Vinci PDex / CDex / PAS / DTR / CRD, CARIN Blue Button, SMART App Launch 2.0, Bulk Data 2.0.
+- Auth & Security: SMART scopes (patient/*.rs, user/*.read, system/*.read, launch/patient, offline_access), Authorization Code + PKCE, Backend Services JWT client assertion, Consent + meta.security tagging, Provenance trails.
+- Production Patterns: Conditional create (If-None-Exist), Conditional update, ETag / If-Match concurrency, transaction Bundle composition with urn:uuid cross-references, OperationOutcome handling, Bundle.link.next pagination.
+- HL7v2 Interop: PID / PV1 / OBX / OBR / ORC / RXE / DG1 segment mappings into Patient / Encounter / Observation / DiagnosticReport / MedicationRequest / Condition; ADT, ORU, ORM, SIU, RDE, VXU, MDM message families.
+- Tooling: HAPI FHIR test server, SMART Health IT sandbox, Synthea synthetic data generation, Inferno US Core certification harness, HL7 FHIR validator (CLI JAR), Firely Terminal, FHIRPath evaluators, fhir.resources (Pydantic), Postman.
+
+## Selected Hands-On Work
+- Authored ADT^A01 → FHIR transaction Bundle (Patient + Encounter + Condition + Observation) with urn:uuid cross-referencing and conditional-create idempotency for MRN.
+- Mapped ORU^R01 lab message family to DiagnosticReport + Observation graph with LOINC binding and UCUM unit normalization.
+- Built a US Core conformant Patient with race / ethnicity / birthsex extensions and validated against US Core 6.1.0 IG using the official validator CLI.
+- Implemented SMART on FHIR Standalone Launch (Authorization Code + PKCE) and Backend Services JWT flows against the SMART Health IT sandbox.
+- Practised Bulk Data $export kickoff → polling → NDJSON consumption end-to-end.
+
+## Personal Self-Assessment (Continuous)
+- ${stats.daysPassed} / 7 daywise curriculum modules passed (validation-engine certified).
+- ${stats.tasksPassed} / ${stats.totalTasks || 18} graded micro-tasks completed (FHIR resource construction + HL7v2 mapping + transaction Bundle).
+- ${totalReadinessTicks} / ${totalReadinessItems}+ role-readiness micro-skills self-validated.
+
+## Education / Certifications
+- [Add your degree + institution + year]
+- [Add any HL7 / FHIR / payor-related certifications, e.g. HL7 FHIR Foundation course completion]
+`
+
+  const linkedinAbout = `${profile.years}+ years of production Python (FastAPI, async httpx, Pydantic) with deep, hands-on HL7 FHIR R4 fluency.
+
+I build and validate clinical FHIR resources (Patient, Encounter, Observation, Condition, MedicationRequest, AllergyIntolerance) and payer-side resources (Coverage, Claim, ExplanationOfBenefit). Comfortable with US Core 6.1+ profile conformance, SMART on FHIR (Standalone Launch with PKCE and Backend Services JWT), and Bulk Data $export.
+
+Strong on the legacy → modern bridge: I map HL7v2 ADT / ORU / SIU / RDE / VXU message families into FHIR transaction Bundles with urn:uuid cross-references and idempotent conditional-create patterns.
+
+Terminology fluency: LOINC, SNOMED CT, RxNorm, ICD-10-CM/PCS, CPT, NDC, CVX, UCUM.
+
+Tooling I have hands-on with: HAPI FHIR test server, Synthea, Inferno (US Core), HL7 FHIR Validator (CLI JAR), Firely Terminal, FHIRPath evaluators.
+
+Looking for FHIR Integration Engineer / Interoperability Analyst / Senior Integration Specialist roles in payer GCCs and health-tech products.`
+
+  const coverOpener = `Hi {HiringManager},
+
+Reaching out about open FHIR Integration / Interoperability roles at {Company}.
+
+Snapshot — ${profile.years}+ yrs production Python (FastAPI, async, Pydantic); hands-on FHIR R4 (Patient, Practitioner, Encounter, Observation, Condition, MedicationRequest, AllergyIntolerance, Coverage, Claim, EOB); US Core 6.1+ profile conformance; SMART on FHIR (Auth Code + PKCE and Backend Services JWT); Bulk Data $export; HL7v2 → FHIR mapping (ADT, ORU, SIU, RDE, VXU); fluency in LOINC / SNOMED CT / RxNorm / ICD-10-CM / UCUM.
+
+Recent self-driven build: an ADT^A01 admission message → FHIR transaction Bundle (Patient + Encounter + Condition + Observation) with urn:uuid cross-references and idempotent conditional-create. Happy to share the artefact.
+
+Could we connect for a 15-min chat?
+
+— ${profile.name}
+${profile.email}  ·  ${profile.linkedin}`
+
+  const downloadFile = (filename, content, mime = 'text/plain') => {
+    const blob = new Blob([content], { type: mime })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = filename; a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 100)
+  }
+
+  const handleCopy = (id, text) => { navigator.clipboard.writeText(text); setCopied(id); setTimeout(() => setCopied(null), 1500) }
+
+  return (
+    <Card className="border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileJson className="w-5 h-5 text-emerald-400" /> Resume / Outreach Exporter
+        </CardTitle>
+        <CardDescription>
+          Generates a FHIR-specific resume block, LinkedIn About snippet, and cover-letter opener — auto-populated with your local progress stats.
+          Edit the profile fields below, then copy or download.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {/* Profile inputs */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[
+            { k: 'name', label: 'Full Name' },
+            { k: 'currentRole', label: 'Current Role Title' },
+            { k: 'years', label: 'Years of Experience' },
+            { k: 'location', label: 'Location' },
+            { k: 'email', label: 'Email' },
+            { k: 'phone', label: 'Phone' },
+            { k: 'linkedin', label: 'LinkedIn URL' },
+            { k: 'github', label: 'GitHub / Portfolio URL' },
+          ].map((f) => (
+            <div key={f.k}>
+              <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">{f.label}</label>
+              <input
+                type="text" value={profile[f.k]} onChange={(e) => onChange(f.k, e.target.value)}
+                className="w-full mt-1 bg-zinc-950 border border-zinc-800 rounded-md px-3 py-1.5 text-sm text-zinc-200 focus:outline-none focus:border-emerald-500/50"
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Live stats badge */}
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300">
+            {stats.daysPassed} / 7 days passed
+          </Badge>
+          <Badge variant="outline" className="border-cyan-500/40 bg-cyan-500/10 text-cyan-300">
+            {stats.tasksPassed} / {stats.totalTasks || '—'} tasks passed
+          </Badge>
+          <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-300">
+            {totalReadinessTicks} readiness ticks
+          </Badge>
+        </div>
+
+        {/* Skills one-liner */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold text-zinc-200">Skills One-Liner (resume header)</div>
+            <Button size="sm" variant="ghost" onClick={() => handleCopy('skills', skillsBullet)}>
+              <Copy className="w-3.5 h-3.5 mr-1" /> {copied === 'skills' ? 'Copied!' : 'Copy'}
+            </Button>
+          </div>
+          <pre className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs whitespace-pre-wrap font-mono text-zinc-300 leading-relaxed">{skillsBullet}</pre>
+        </div>
+
+        {/* Resume markdown */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="text-sm font-semibold text-zinc-200">Full Resume Block (Markdown)</div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" onClick={() => handleCopy('resume', resumeBlock)}>
+                <Copy className="w-3.5 h-3.5 mr-1" /> {copied === 'resume' ? 'Copied!' : 'Copy MD'}
+              </Button>
+              <Button size="sm" variant="outline" className="border-zinc-700"
+                onClick={() => downloadFile(`${profile.name.replace(/\s+/g, '_')}_FHIR_Resume.md`, resumeBlock, 'text/markdown')}>
+                Download .md
+              </Button>
+              <Button size="sm" variant="outline" className="border-zinc-700"
+                onClick={() => downloadFile(`${profile.name.replace(/\s+/g, '_')}_FHIR_Resume.txt`, resumeBlock)}>
+                Download .txt
+              </Button>
+            </div>
+          </div>
+          <pre className="bg-zinc-950 border border-zinc-800 rounded-lg p-4 text-xs whitespace-pre-wrap font-mono text-zinc-300 leading-relaxed max-h-[420px] overflow-auto">{resumeBlock}</pre>
+        </div>
+
+        {/* LinkedIn About */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold text-zinc-200">LinkedIn About Section</div>
+            <Button size="sm" variant="ghost" onClick={() => handleCopy('li', linkedinAbout)}>
+              <Copy className="w-3.5 h-3.5 mr-1" /> {copied === 'li' ? 'Copied!' : 'Copy'}
+            </Button>
+          </div>
+          <pre className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs whitespace-pre-wrap font-mono text-zinc-300 leading-relaxed">{linkedinAbout}</pre>
+        </div>
+
+        {/* Cover opener */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold text-zinc-200">Cover Letter / Cold Pitch Opener</div>
+            <Button size="sm" variant="ghost" onClick={() => handleCopy('cover', coverOpener)}>
+              <Copy className="w-3.5 h-3.5 mr-1" /> {copied === 'cover' ? 'Copied!' : 'Copy'}
+            </Button>
+          </div>
+          <pre className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs whitespace-pre-wrap font-mono text-zinc-300 leading-relaxed">{coverOpener}</pre>
+        </div>
+
+        <p className="text-xs text-zinc-500 leading-relaxed">
+          Tip: All your inputs and stats are read from your browser&apos;s localStorage. Nothing is sent to a server.
+          Re-open this page anytime and the latest progress is reflected automatically.
+        </p>
+      </CardContent>
+    </Card>
   )
 }
 
