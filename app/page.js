@@ -9,6 +9,19 @@ import {
   LINKEDIN_TEMPLATES,
   PYTHON_SIDECAR,
 } from '@/lib/fhir-curriculum'
+import {
+  RESOURCE_CATALOG,
+  FHIRPATH_CHEATS,
+  TERMINOLOGY_SYSTEMS,
+  OPERATIONS_CATALOG,
+  IMPLEMENTATION_GUIDES,
+  SMART_SCOPES,
+  HL7V2_MESSAGE_TYPES,
+  PRODUCTION_GOTCHAS,
+  TOOLING,
+  INTERVIEW_QUESTIONS,
+  READINESS_CHECKLIST,
+} from '@/lib/fhir-reference'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -22,6 +35,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import {
   CheckCircle2, Circle, Code2, Copy, ExternalLink, FileJson, GraduationCap,
   ListChecks, Target, Trophy, XCircle, Zap, Rocket, BookOpen, Wrench,
+  Library, AlertTriangle, Sparkles, MessageCircleQuestion,
 } from 'lucide-react'
 
 // ---------- helpers ----------
@@ -386,6 +400,9 @@ function App() {
             <Button variant={view === 'learn' ? 'default' : 'ghost'} size="sm" onClick={() => setView('learn')}>
               <GraduationCap className="w-4 h-4 mr-1.5" /> Learn
             </Button>
+            <Button variant={view === 'library' ? 'default' : 'ghost'} size="sm" onClick={() => setView('library')}>
+              <Library className="w-4 h-4 mr-1.5" /> Reference Library
+            </Button>
             <Button variant={view === 'matrix' ? 'default' : 'ghost'} size="sm" onClick={() => setView('matrix')}>
               <Target className="w-4 h-4 mr-1.5" /> Career Matrix
             </Button>
@@ -661,6 +678,7 @@ function App() {
         )}
 
         {view === 'matrix' && <CareerMatrix />}
+        {view === 'library' && <ReferenceLibrary />}
       </main>
 
       <footer className="border-t border-zinc-800/60 mt-12 py-6 text-center text-xs text-zinc-500">
@@ -765,4 +783,338 @@ const CareerMatrix = () => {
   )
 }
 
+// ---------- REFERENCE LIBRARY VIEW ----------
+const ReferenceLibrary = () => {
+  const [tab, setTab] = useState('catalog')
+  const [openQ, setOpenQ] = useState(null)
+
+  return (
+    <div className="space-y-6">
+      <Card className="border-zinc-800 bg-gradient-to-br from-zinc-900/80 to-zinc-900/40">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Library className="w-5 h-5 text-cyan-400" /> Reference Library
+          </CardTitle>
+          <CardDescription>
+            The HL7.org-grade material the 5-day path does not drill into. Daily reference + interview prep.
+            Covers payer/financial resources, FHIRPath, terminology systems, $operations, IGs, SMART scopes,
+            HL7v2 catalog, production gotchas, tooling, and 15 high-yield interview Q&amp;A.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
+        <TabsList className="bg-zinc-900 border border-zinc-800 flex-wrap h-auto">
+          <TabsTrigger value="catalog">Resource Catalog</TabsTrigger>
+          <TabsTrigger value="terms">Terminology</TabsTrigger>
+          <TabsTrigger value="ops">$Operations</TabsTrigger>
+          <TabsTrigger value="fhirpath">FHIRPath</TabsTrigger>
+          <TabsTrigger value="igs">Implementation Guides</TabsTrigger>
+          <TabsTrigger value="smart">SMART Scopes</TabsTrigger>
+          <TabsTrigger value="hl7v2">HL7v2 Catalog</TabsTrigger>
+          <TabsTrigger value="gotchas">Production Gotchas</TabsTrigger>
+          <TabsTrigger value="tooling">Tooling</TabsTrigger>
+          <TabsTrigger value="interview">Interview Bank</TabsTrigger>
+          <TabsTrigger value="checklist">Readiness</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="catalog" className="mt-4 space-y-4">
+          {RESOURCE_CATALOG.map((g, gi) => (
+            <Card key={gi} className="border-zinc-800 bg-zinc-900/60">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-cyan-400" /> {g.group}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Accordion type="multiple" className="w-full">
+                  {g.items.map((r, ri) => (
+                    <AccordionItem key={ri} value={`r-${gi}-${ri}`} className="border-zinc-800">
+                      <AccordionTrigger className="text-sm hover:no-underline">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-emerald-300">{r.name}</span>
+                          <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">FMM {r.fmm}</Badge>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <p className="text-sm text-zinc-300 mb-2">{r.purpose}</p>
+                        <p className="text-xs text-zinc-400 font-mono leading-relaxed pl-3 border-l-2 border-zinc-800">
+                          {r.keyFields}
+                        </p>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
+
+        <TabsContent value="terms" className="mt-4">
+          <Card className="border-zinc-800 bg-zinc-900/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Terminology Systems · Canonical URL Master</CardTitle>
+              <CardDescription>Memorise these URLs cold — every code in production goes through one of them.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-zinc-800 text-xs uppercase tracking-wide text-zinc-500">
+                      <th className="text-left py-2 px-3">System</th>
+                      <th className="text-left py-2 px-3">Canonical URL</th>
+                      <th className="text-left py-2 px-3">Use</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {TERMINOLOGY_SYSTEMS.map((t, i) => (
+                      <tr key={i} className="border-b border-zinc-800/60 hover:bg-zinc-800/30">
+                        <td className="py-2 px-3 font-semibold text-emerald-300 whitespace-nowrap">{t.name}</td>
+                        <td className="py-2 px-3 text-cyan-300 font-mono text-xs break-all">{t.canonical}</td>
+                        <td className="py-2 px-3 text-zinc-400 text-xs">{t.use}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="ops" className="mt-4">
+          <Card className="border-zinc-800 bg-zinc-900/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">$Operations Catalog</CardTitle>
+              <CardDescription>Operations prefixed with $ — extended verbs beyond REST.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {OPERATIONS_CATALOG.map((o, i) => (
+                <div key={i} className="p-3 rounded-lg bg-zinc-950/50 border border-zinc-800">
+                  <div className="flex items-center gap-3 mb-1 flex-wrap">
+                    <span className="font-mono text-sm text-amber-300">{o.op}</span>
+                    <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{o.scope}</Badge>
+                  </div>
+                  <p className="text-xs text-zinc-300 font-mono">{o.use}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="fhirpath" className="mt-4">
+          <Card className="border-zinc-800 bg-zinc-900/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">FHIRPath Cheatsheet</CardTitle>
+              <CardDescription>Path expression language used in invariants, Subscription criteria, custom evaluators.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {FHIRPATH_CHEATS.map((c, i) => (
+                <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-2 p-2.5 rounded-md bg-zinc-950/50 border border-zinc-800">
+                  <code className="text-xs text-emerald-300 font-mono break-all">{c.expr}</code>
+                  <span className="text-xs text-zinc-400">{c.meaning}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="igs" className="mt-4">
+          <Card className="border-zinc-800 bg-zinc-900/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Implementation Guides (IGs)</CardTitle>
+              <CardDescription>Recognise these names. Know what each is for. Especially Da Vinci + CARIN BB for payer roles.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {IMPLEMENTATION_GUIDES.map((g, i) => (
+                <div key={i} className="p-3 rounded-lg bg-zinc-950/50 border border-zinc-800">
+                  <div className="flex items-center justify-between gap-3 flex-wrap mb-1">
+                    <span className="font-semibold text-sm text-emerald-300">{g.ig}</span>
+                    <span className="text-[10px] uppercase tracking-wide text-zinc-500">{g.body}</span>
+                  </div>
+                  <p className="text-xs text-zinc-300">{g.focus}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="smart" className="mt-4">
+          <Card className="border-zinc-800 bg-zinc-900/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">SMART on FHIR Scopes</CardTitle>
+              <CardDescription>What you ask for in the OAuth authorize call → what the token can actually do.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {SMART_SCOPES.map((s, i) => (
+                <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-2 p-2.5 rounded-md bg-zinc-950/50 border border-zinc-800">
+                  <code className="text-xs text-amber-300 font-mono break-all">{s.scope}</code>
+                  <span className="text-xs text-zinc-400">{s.meaning}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="hl7v2" className="mt-4">
+          <Card className="border-zinc-800 bg-zinc-900/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">HL7v2 Message Type → FHIR Target</CardTitle>
+              <CardDescription>The legacy messages you will receive in real integration roles.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-zinc-800 text-xs uppercase tracking-wide text-zinc-500">
+                      <th className="text-left py-2 px-3">Type</th>
+                      <th className="text-left py-2 px-3">Meaning</th>
+                      <th className="text-left py-2 px-3">FHIR Target</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {HL7V2_MESSAGE_TYPES.map((m, i) => (
+                      <tr key={i} className="border-b border-zinc-800/60 hover:bg-zinc-800/30">
+                        <td className="py-2 px-3 font-mono text-amber-300 whitespace-nowrap">{m.type}</td>
+                        <td className="py-2 px-3 text-zinc-300 text-xs">{m.meaning}</td>
+                        <td className="py-2 px-3 text-zinc-400 text-xs">{m.fhirTarget}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="gotchas" className="mt-4">
+          <Card className="border-zinc-800 bg-zinc-900/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400" /> Production Gotchas
+              </CardTitle>
+              <CardDescription>Pitfalls that turn a passing demo into a 3 AM page. Read once a week.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="multiple" className="w-full">
+                {PRODUCTION_GOTCHAS.map((g, i) => (
+                  <AccordionItem key={i} value={`g-${i}`} className="border-zinc-800">
+                    <AccordionTrigger className="text-sm hover:no-underline text-left">
+                      <span className="text-amber-300">{g.topic}</span>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <p className="text-xs text-zinc-300 leading-relaxed">{g.detail}</p>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tooling" className="mt-4">
+          <Card className="border-zinc-800 bg-zinc-900/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Tooling You Should Touch Once</CardTitle>
+              <CardDescription>Don&apos;t just read — actually run each of these at least once before interviews.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {TOOLING.map((t, i) => (
+                <div key={i} className="p-3 rounded-lg bg-zinc-950/50 border border-zinc-800">
+                  <div className="flex items-center justify-between gap-3 flex-wrap mb-1">
+                    <span className="font-semibold text-sm text-emerald-300">{t.name}</span>
+                    <a href={t.url.startsWith('http') ? t.url : '#'} target="_blank" rel="noopener noreferrer"
+                       className="text-xs text-cyan-400 hover:underline font-mono inline-flex items-center gap-1">
+                      {t.url.length > 50 ? t.url.slice(0, 50) + '...' : t.url}
+                      {t.url.startsWith('http') && <ExternalLink className="w-3 h-3" />}
+                    </a>
+                  </div>
+                  <p className="text-xs text-zinc-400">{t.note}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="interview" className="mt-4">
+          <Card className="border-zinc-800 bg-zinc-900/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <MessageCircleQuestion className="w-4 h-4 text-cyan-400" /> Interview Question Bank
+              </CardTitle>
+              <CardDescription>15 high-yield questions. Click to reveal model answer. Practice saying them out loud.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {INTERVIEW_QUESTIONS.map((q, i) => (
+                <div key={i} className="rounded-lg border border-zinc-800 bg-zinc-950/50">
+                  <button onClick={() => setOpenQ(openQ === i ? null : i)}
+                    className="w-full text-left px-4 py-3 flex items-center justify-between gap-2 hover:bg-zinc-900/40 transition">
+                    <span className="text-sm text-emerald-300 font-medium">{i + 1}. {q.q}</span>
+                    <span className="text-xs text-zinc-500">{openQ === i ? 'Hide' : 'Reveal'}</span>
+                  </button>
+                  {openQ === i && (
+                    <div className="px-4 pb-4 pt-1 border-t border-zinc-800">
+                      <p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap">{q.a}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="checklist" className="mt-4 space-y-3">
+          <Card className="border-zinc-800 bg-zinc-900/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Role-Switch Readiness Checklist</CardTitle>
+              <CardDescription>Tick each item once you can explain/demo it without notes. Aim for ≥ 80% per area before applying.</CardDescription>
+            </CardHeader>
+          </Card>
+          {READINESS_CHECKLIST.map((s, i) => (
+            <ReadinessSection key={i} section={s} idx={i} />
+          ))}
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+const ReadinessSection = ({ section, idx }) => {
+  const storageKey = `fhir-readiness-${idx}`
+  const [checks, setChecks] = useState({})
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storageKey)
+      if (raw) setChecks(JSON.parse(raw))
+    } catch {}
+  }, [storageKey])
+  useEffect(() => {
+    try { localStorage.setItem(storageKey, JSON.stringify(checks)) } catch {}
+  }, [checks, storageKey])
+
+  const done = Object.values(checks).filter(Boolean).length
+  const pct = section.items.length ? (done / section.items.length) * 100 : 0
+
+  return (
+    <Card className="border-zinc-800 bg-zinc-900/60">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <CardTitle className="text-sm text-emerald-300">{section.area}</CardTitle>
+          <span className="text-xs text-zinc-400">{done} / {section.items.length}</span>
+        </div>
+        <Progress value={pct} className="h-1 mt-1" />
+      </CardHeader>
+      <CardContent className="space-y-1.5">
+        {section.items.map((item, i) => (
+          <label key={i} className="flex items-start gap-2 cursor-pointer">
+            <Checkbox checked={!!checks[i]} onCheckedChange={() => setChecks((p) => ({ ...p, [i]: !p[i] }))} className="mt-0.5" />
+            <span className={`text-xs leading-relaxed ${checks[i] ? 'text-zinc-500 line-through' : 'text-zinc-300'}`}>{item}</span>
+          </label>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
 export default App
+
+
